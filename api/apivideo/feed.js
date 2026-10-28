@@ -26,6 +26,8 @@ export default async function handler(req, res) {
       createdAt: v.createdAt || null,
       status: v.status || null,
       playerUrl: v.assets?.player || (v.videoId ? `https://embed.api.video/vod/${encodeURIComponent(v.videoId)}` : null),
+      mp4Url: v.assets?.mp4 || null,
+      hlsUrl: v.assets?.hls || null,
       thumbnailUrl: v.assets?.thumbnail || null,
       source: "api.video"
     })).filter(v => v.videoId && v.playerUrl);

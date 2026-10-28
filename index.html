@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="OIO Shorts Lab — feed vertical e laboratório de diagnóstico do Pinterest.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>OIO Shorts Lab</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#feed" aria-label="OIO Shorts Lab">
+        <span class="brand-mark"><i data-lucide="play"></i></span>
+        <span>OIO <b>SHORTS</b></span>
+      </a>
+      <div class="feed-tabs" role="tablist" aria-label="Tipo de feed">
+        <button class="feed-tab" data-feed="following" role="tab">Seguindo</button>
+        <button class="feed-tab active" data-feed="for-you" role="tab">Para você</button>
+      </div>
+      <button class="icon-button" id="search-toggle" aria-label="Pesquisar"><i data-lucide="search"></i></button>
+    </header>
+
+    <form class="search-panel hidden" id="search-form">
+      <i data-lucide="search"></i>
+      <input id="search-input" type="search" placeholder="Buscar vídeos ou ID do Pin" autocomplete="off">
+      <button type="button" id="search-close" aria-label="Fechar pesquisa"><i data-lucide="x"></i></button>
+    </form>
+
+    <main id="main-content">
+      <section id="feed-screen" class="screen active" aria-label="Feed de vídeos">
+        <div class="stories" aria-label="Perfis em destaque">
+          <button class="story"><span class="story-ring add-ring"><i data-lucide="plus"></i></span><small>Seu perfil</small></button>
+          <button class="story"><span class="story-ring"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop" alt=""></span><small>Descobrir</small></button>
+          <button class="story"><span class="story-ring"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop" alt=""></span><small>Criadores</small></button>
+          <button class="story"><span class="story-ring"><img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&h=120&fit=crop" alt=""></span><small>Em alta</small></button>
+          <button class="story"><span class="story-ring"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop" alt=""></span><small>Seguindo</small></button>
+        </div>
+
+        <div class="video-feed" id="video-feed">
+          <article class="short-card" data-id="demo-1">
+            <img class="video-poster" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&h=1600&fit=crop" alt="Paisagem de montanhas" loading="eager">
+            <div class="video-shade"></div>
+            <div class="video-topline"><span class="live-pill"><span></span> OIO SHORTS LAB</span><span class="demo-label">DEMONSTRAÇÃO</span></div>
+            <div class="video-info">
+              <div class="creator-line"><span class="creator-avatar">O</span><b>@oio_descobre</b><button class="follow-button">Seguir</button></div>
+              <h2>Descubra novos lugares 🌎</h2>
+              <p>Feed vertical preparado para integrar vídeos do Pinterest.</p>
+              <div class="music-line"><i data-lucide="music-2"></i><span>Áudio original · OIO Shorts Lab</span></div>
+            </div>
+            <aside class="action-rail" aria-label="Ações do vídeo">
+              <button class="rail-action like-action" aria-label="Curtir"><span class="rail-icon"><i data-lucide="heart"></i></span><small>12,4 mil</small></button>
+              <button class="rail-action comment-action" aria-label="Comentar"><span class="rail-icon"><i data-lucide="message-circle"></i></span><small>Comentários</small></button>
+              <button class="rail-action save-action" aria-label="Salvar"><span class="rail-icon"><i data-lucide="bookmark"></i></span><small>Salvar</small></button>
+              <button class="rail-action share-action" aria-label="Compartilhar"><span class="rail-icon"><i data-lucide="share-2"></i></span><small>Enviar</small></button>
+              <button class="rail-action more-action" aria-label="Mais opções"><span class="rail-icon"><i data-lucide="more-horizontal"></i></span><small>Mais</small></button>
+            </aside>
+            <button class="sound-button" aria-label="Alternar som"><i data-lucide="volume-2"></i></button>
+          </article>
+          <article class="short-card" data-id="demo-2">
+            <img class="video-poster" src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=900&h=1600&fit=crop" alt="Céu estrelado" loading="lazy">
+            <div class="video-shade"></div>
+            <div class="video-topline"><span class="live-pill"><span></span> PARA VOCÊ</span><span class="demo-label">DEMONSTRAÇÃO</span></div>
+            <div class="video-info">
+              <div class="creator-line"><span class="creator-avatar alt">✦</span><b>@universo_visual</b><button class="follow-button">Seguir</button></div>
+              <h2>Um universo de ideias ✨</h2>
+              <p>Esta publicação é uma amostra visual; ainda não é um Pin do Pinterest.</p>
+              <div class="music-line"><i data-lucide="music-2"></i><span>Descobertas · OIO Shorts Lab</span></div>
+            </div>
+            <aside class="action-rail" aria-label="Ações do vídeo">
+              <button class="rail-action like-action" aria-label="Curtir"><span class="rail-icon"><i data-lucide="heart"></i></span><small>8.102</small></button>
+              <button class="rail-action comment-action" aria-label="Comentar"><span class="rail-icon"><i data-lucide="message-circle"></i></span><small>Comentários</small></button>
+              <button class="rail-action save-action" aria-label="Salvar"><span class="rail-icon"><i data-lucide="bookmark"></i></span><small>Salvar</small></button>
+              <button class="rail-action share-action" aria-label="Compartilhar"><span class="rail-icon"><i data-lucide="share-2"></i></span><small>Enviar</small></button>
+              <button class="rail-action more-action" aria-label="Mais opções"><span class="rail-icon"><i data-lucide="more-horizontal"></i></span><small>Mais</small></button>
+            </aside>
+            <button class="sound-button" aria-label="Alternar som"><i data-lucide="volume-2"></i></button>
+          </article>
+        </div>
+      </section>
+
+      <section id="discover-screen" class="screen discover-screen" aria-label="Descobrir">
+        <div class="section-heading"><div><p class="eyebrow">EXPLORE O UNIVERSO</p><h1>Descobrir</h1></div><span class="heading-icon"><i data-lucide="compass"></i></span></div>
+        <label class="discover-search"><i data-lucide="search"></i><input id="discover-query" placeholder="Pesquisar conteúdo ou ID de Pin"><button id="discover-search-button" aria-label="Pesquisar"><i data-lucide="arrow-right"></i></button></label>
+        <div class="category-grid">
+          <button class="category-tile nature" data-query="natureza"><i data-lucide="mountain"></i><b>Natureza</b><small>Paisagens e viagens</small></button>
+          <button class="category-tile music" data-query="música"><i data-lucide="music"></i><b>Música</b><small>Ritmo e criatividade</small></button>
+          <button class="category-tile art" data-query="arte"><i data-lucide="palette"></i><b>Arte e design</b><small>Inspiração visual</small></button>
+          <button class="category-tile science" data-query="ciência"><i data-lucide="orbit"></i><b>Ciência</b><small>Ideias e descobertas</small></button>
+        </div>
+        <div class="panel-card">
+          <div class="panel-title"><span class="panel-icon"><i data-lucide="shield-check"></i></span><div><b>Laboratório Pinterest</b><small>Diagnóstico sem alterar a conexão</small></div></div>
+          <p>Informe um ID de Pin para preparar um teste. A consulta real será habilitada quando o fluxo seguro do GitHub Actions estiver configurado.</p>
+          <label class="pin-id-field"><span>ID do Pin</span><input id="pin-id" placeholder="Ex.: 123456789012345678" inputmode="numeric"></label>
+          <button class="primary-button" id="diagnose-button"><i data-lucide="activity"></i> Preparar diagnóstico</button>
+          <div id="diagnostic-result" class="diagnostic-result hidden" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="activity-screen" class="screen simple-screen">
+        <div class="section-heading"><div><p class="eyebrow">SUA COMUNIDADE</p><h1>Atividade</h1></div><span class="heading-icon"><i data-lucide="bell"></i></span></div>
+        <div class="empty-state"><span><i data-lucide="messages-square"></i></span><h2>Suas conversas começam aqui</h2><p>Notificações, comentários e interações poderão aparecer nesta área nas próximas etapas.</p></div>
+      </section>
+
+      <section id="profile-screen" class="screen simple-screen">
+        <div class="profile-hero"><div class="profile-avatar"><i data-lucide="user-round"></i></div><p class="eyebrow">SEU ESPAÇO</p><h1>OIO Shorts Lab</h1><p>Seu laboratório de vídeos e descobertas.</p></div>
+        <div class="profile-stats"><div><b>0</b><small>Publicações</small></div><div><b>0</b><small>Seguidores</small></div><div><b>0</b><small>Seguindo</small></div></div>
+        <div class="panel-card"><div class="panel-title"><span class="panel-icon"><i data-lucide="settings-2"></i></span><div><b>Estado do projeto</b><small>Protótipo visual inicial</small></div></div><p>As ações de comunidade são demonstrativas nesta versão. Nenhum dado é enviado ao Pinterest.</p></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegação principal">
+      <button class="nav-item active" data-screen="feed-screen"><i data-lucide="house"></i><span>Início</span></button>
+      <button class="nav-item" data-screen="discover-screen"><i data-lucide="compass"></i><span>Descobrir</span></button>
+      <button class="create-button" id="create-button" aria-label="Criar"><i data-lucide="plus"></i></button>
+      <button class="nav-item" data-screen="activity-screen"><i data-lucide="inbox"></i><span>Atividade</span></button>
+      <button class="nav-item" data-screen="profile-screen"><i data-lucide="user-round"></i><span>Perfil</span></button>
+    </nav>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -64,7 +64,7 @@
   async function loadApiVideoFeed() {
     if (!feedEl || location.hostname.endsWith("github.io")) return;
     try {
-      const response = await fetch(`${API_BASE}/api/apivideo/feed`, { headers: { Accept: "application/json" } });
+      const response = await fetch(`${API_BASE}/api/apivideo/feed?refresh=${Date.now()}`, { cache: "no-store", headers: { Accept: "application/json" } });
       if (!response.ok) return;
       const payload = await response.json();
       (payload.videos || []).forEach(video => {
@@ -75,7 +75,7 @@
         card.dataset.id = video.videoId;
         const frame = document.createElement("iframe");
         frame.className = "video-poster api-video-player";
-        frame.src = `https://embed.api.video/vod/${encodeURIComponent(video.videoId)}`;
+        frame.src = video.playerUrl || `https://embed.api.video/vod/${encodeURIComponent(video.videoId)}`;
         frame.title = video.title || "Vídeo publicado";
         frame.allow = "autoplay; fullscreen; picture-in-picture";
         frame.allowFullscreen = true;
@@ -117,7 +117,8 @@
     });
     const uploadData = await uploadResponse.json().catch(() => ({}));
     if (!uploadResponse.ok) throw new Error(uploadData.message || "O api.video recusou o arquivo.");
-    toast("Vídeo enviado! Ele aparecerá quando o api.video terminar o processamento.");
+    toast("Upload recebido pelo api.video. Atualizando o feed…");
+    await new Promise(resolve => setTimeout(resolve, 5000));
     await loadApiVideoFeed();
   }
 

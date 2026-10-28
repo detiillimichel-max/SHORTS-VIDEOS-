@@ -57,7 +57,92 @@
   }));
   $$(".sound-button").forEach(button => button.addEventListener("click", () => toast("O som será ativado quando houver vídeos reproduzíveis.")));
   $$(".more-action").forEach(button => button.addEventListener("click", () => toast("Mais opções serão adicionadas depois.")));
-  $("#create-button").addEventListener("click", () => toast("Publicação de vídeos será adicionada numa próxima etapa."));
+  const API_BASE = location.origin;
+  const feedEl = $("#video-feed");
+  let apiVideoIds = new Set();
+
+  async function loadApiVideoFeed() {
+    if (!feedEl || location.hostname.endsWith("github.io")) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/apivideo/feed`, { headers: { Accept: "application/json" } });
+      if (!response.ok) return;
+      const payload = await response.json();
+      (payload.videos || []).forEach(video => {
+        if (!video.videoId || apiVideoIds.has(video.videoId)) return;
+        apiVideoIds.add(video.videoId);
+        const card = document.createElement("article");
+        card.className = "short-card";
+        card.dataset.id = video.videoId;
+        const frame = document.createElement("iframe");
+        frame.className = "video-poster api-video-player";
+        frame.src = `https://embed.api.video/vod/${encodeURIComponent(video.videoId)}`;
+        frame.title = video.title || "Vídeo publicado";
+        frame.allow = "autoplay; fullscreen; picture-in-picture";
+        frame.allowFullscreen = true;
+        frame.loading = "lazy";
+        const shade = document.createElement("div");
+        shade.className = "video-shade";
+        const top = document.createElement("div");
+        top.className = "video-topline";
+        top.innerHTML = '<span class="live-pill"><span></span> OIO SHORTS</span><span class="demo-label">API.VIDEO</span>';
+        const info = document.createElement("div");
+        info.className = "video-info";
+        const title = document.createElement("h2");
+        title.textContent = video.title || "Vídeo publicado";
+        const description = document.createElement("p");
+        description.textContent = video.description || "Vídeo publicado no OIO Shorts.";
+        info.append(title, description);
+        card.append(frame, shade, top, info);
+        feedEl.appendChild(card);
+      });
+    } catch (_) {
+      // A API fica indisponível sem interromper a interface de demonstração.
+    }
+  }
+
+  $("#create-button").addEventListener("click", async () => {
+    if (location.hostname.endsWith("github.io")) {
+      toast("Abra o OIO Shorts pelo endereço da Vercel para usar o envio de vídeos.");
+      return;
+    }
+    const pin = window.prompt("Digite o PIN de publicação configurado na Vercel:");
+    if (pin === null) return;
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = "video/*";
+    picker.style.display = "none";
+    document.body.appendChild(picker);
+    picker.addEventListener("change", async () => {
+      const file = picker.files?.[0];
+      picker.remove();
+      if (!file) return;
+      if (!file.type.startsWith("video/")) { toast("Escolha um arquivo de vídeo."); return; }
+      try {
+        toast("Preparando envio seguro…");
+        const tokenResponse = await fetch(`${API_BASE}/api/apivideo/upload-token`, {
+          method: "POST",
+          headers: { "X-OIO-Upload-Pin": pin, Accept: "application/json" }
+        });
+        const tokenData = await tokenResponse.json().catch(() => ({}));
+        if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || "Não foi possível preparar o envio.");
+        const body = new FormData();
+        body.append("file", file, file.name);
+        const uploadResponse = await fetch(`https://ws.api.video/upload?token=${encodeURIComponent(tokenData.token)}`, {
+          method: "POST",
+          body
+        });
+        const uploadData = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok) throw new Error(uploadData.message || "O api.video recusou o arquivo.");
+        toast("Vídeo enviado! A preparação pode levar alguns minutos.");
+        await loadApiVideoFeed();
+      } catch (error) {
+        toast(error.message || "Falha no envio do vídeo.");
+      }
+    }, { once: true });
+    picker.click();
+  });
+
+  loadApiVideoFeed();
 
   const searchPanel = $("#search-form");
   $("#search-toggle").addEventListener("click", () => {

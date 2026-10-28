@@ -100,46 +100,118 @@
     }
   }
 
-  $("#create-button").addEventListener("click", async () => {
+  async function uploadToApiVideo(file, title = "") {
+    if (!file || !file.type.startsWith("video/")) throw new Error("Escolha um arquivo de vídeo.");
+    if (file.size > 200 * 1024 * 1024) throw new Error("Para este teste, escolha um vídeo com menos de 200 MB.");
+    toast("Preparando envio…");
+    const tokenResponse = await fetch(`${API_BASE}/api/apivideo/upload-token`, {
+      method: "POST",
+      headers: { Accept: "application/json" }
+    });
+    const tokenData = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || "Não foi possível preparar o envio.");
+    const body = new FormData();
+    body.append("file", file, file.name || "oio-shorts-video.mp4");
+    const uploadResponse = await fetch(`https://ws.api.video/upload?token=${encodeURIComponent(tokenData.token)}`, {
+      method: "POST", body
+    });
+    const uploadData = await uploadResponse.json().catch(() => ({}));
+    if (!uploadResponse.ok) throw new Error(uploadData.message || "O api.video recusou o arquivo.");
+    toast("Vídeo enviado! Ele aparecerá quando o api.video terminar o processamento.");
+    await loadApiVideoFeed();
+  }
+
+  function openPublishChoices() {
+    const oldModal = $("#publish-modal");
+    oldModal?.remove();
+    const modal = document.createElement("div");
+    modal.id = "publish-modal";
+    modal.style.cssText = "position:absolute;inset:0;z-index:100;background:#000b;display:flex;align-items:center;justify-content:center;padding:22px;";
+    modal.innerHTML = `
+      <section style="width:100%;max-width:420px;background:#191b24;color:#fff;border:1px solid #ffffff24;border-radius:22px;padding:22px;font-family:inherit;">
+        <h2 style="margin:0 0 8px;font-size:22px;">Criar Short</h2>
+        <p style="margin:0 0 20px;color:#bfc2d0;font-size:14px;line-height:1.5;">Grave um vídeo de até 30 segundos ou escolha um da galeria.</p>
+        <button id="publish-record" style="width:100%;padding:15px;border:0;border-radius:13px;background:linear-gradient(100deg,#ff315e,#8c5bff);color:white;font-weight:800;margin-bottom:10px;">🎥 Gravar vídeo (30 s)</button>
+        <button id="publish-gallery" style="width:100%;padding:15px;border:1px solid #ffffff30;border-radius:13px;background:#ffffff0d;color:white;font-weight:750;margin-bottom:10px;">🖼️ Escolher da galeria</button>
+        <button id="publish-cancel" style="width:100%;padding:12px;border:0;border-radius:12px;background:transparent;color:#c7c9d4;">Cancelar</button>
+      </section>`;
+    document.querySelector(".app-shell")?.appendChild(modal);
+    $("#publish-cancel", modal).onclick = () => modal.remove();
+    $("#publish-gallery", modal).onclick = () => {
+      modal.remove();
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = "video/*";
+      picker.onchange = async () => {
+        const file = picker.files?.[0];
+        if (!file) return;
+        try { await uploadToApiVideo(file, file.name); }
+        catch (error) { toast(error.message || "Falha no envio do vídeo."); }
+      };
+      picker.click();
+    };
+    $("#publish-record", modal).onclick = async () => {
+      modal.remove();
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        toast("A câmera não está disponível neste navegador. Escolha um vídeo da galeria.");
+        openPublishChoices();
+        return;
+      }
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
+        const recorderModal = document.createElement("div");
+        recorderModal.id = "record-modal";
+        recorderModal.style.cssText = "position:absolute;inset:0;z-index:101;background:#000e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:14px;";
+        recorderModal.innerHTML = `<video id="record-preview" autoplay muted playsinline style="width:100%;max-height:65%;object-fit:contain;background:#111;border-radius:16px;"></video><div id="record-count" style="font-size:20px;font-weight:800;color:white;">Gravação: 0/30 s</div><button id="record-stop" style="width:100%;max-width:420px;padding:15px;border:0;border-radius:13px;background:#ff315e;color:white;font-weight:800;">Parar e publicar</button><button id="record-cancel" style="width:100%;max-width:420px;padding:12px;border:1px solid #ffffff40;border-radius:13px;background:transparent;color:white;">Cancelar</button>`;
+        document.querySelector(".app-shell")?.appendChild(recorderModal);
+        $("#record-preview", recorderModal).srcObject = stream;
+        const chunks = [];
+        const recorder = new MediaRecorder(stream);
+        let seconds = 0;
+        let stopped = false;
+        const timer = setInterval(() => {
+          seconds++;
+          $("#record-count", recorderModal).textContent = `Gravação: ${seconds}/30 s`;
+          if (seconds >= 30 && recorder.state === "recording") recorder.stop();
+        }, 1000);
+        const cleanup = () => {
+          clearInterval(timer);
+          stream.getTracks().forEach(track => track.stop());
+          recorderModal.remove();
+        };
+        recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
+        recorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+          const file = new File([blob], `oio-shorts-${Date.now()}.webm`, { type: blob.type });
+          cleanup();
+          if (!stopped && file.size) {
+            try { await uploadToApiVideo(file, file.name); }
+            catch (error) { toast(error.message || "Falha no envio do vídeo."); }
+          }
+        };
+        recorder.start(250);
+        $("#record-stop", recorderModal).onclick = () => {
+          stopped = false;
+          if (recorder.state === "recording") recorder.stop();
+        };
+        $("#record-cancel", recorderModal).onclick = () => {
+          stopped = true;
+          if (recorder.state === "recording") recorder.stop();
+        };
+      } catch (error) {
+        stream?.getTracks().forEach(track => track.stop());
+        toast("Não foi possível abrir a câmera. Confira a permissão do navegador.");
+      }
+    };
+  }
+
+  $("#create-button").addEventListener("click", () => {
     if (location.hostname.endsWith("github.io")) {
-      toast("Abra o OIO Shorts pelo endereço da Vercel para usar o envio de vídeos.");
+      toast("Abra o OIO Shorts pelo endereço da Vercel para publicar vídeos.");
       return;
     }
-    const pin = window.prompt("Digite o PIN de publicação configurado na Vercel:");
-    if (pin === null) return;
-    const picker = document.createElement("input");
-    picker.type = "file";
-    picker.accept = "video/*";
-    picker.style.display = "none";
-    document.body.appendChild(picker);
-    picker.addEventListener("change", async () => {
-      const file = picker.files?.[0];
-      picker.remove();
-      if (!file) return;
-      if (!file.type.startsWith("video/")) { toast("Escolha um arquivo de vídeo."); return; }
-      try {
-        toast("Preparando envio seguro…");
-        const tokenResponse = await fetch(`${API_BASE}/api/apivideo/upload-token`, {
-          method: "POST",
-          headers: { "X-OIO-Upload-Pin": pin, Accept: "application/json" }
-        });
-        const tokenData = await tokenResponse.json().catch(() => ({}));
-        if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || "Não foi possível preparar o envio.");
-        const body = new FormData();
-        body.append("file", file, file.name);
-        const uploadResponse = await fetch(`https://ws.api.video/upload?token=${encodeURIComponent(tokenData.token)}`, {
-          method: "POST",
-          body
-        });
-        const uploadData = await uploadResponse.json().catch(() => ({}));
-        if (!uploadResponse.ok) throw new Error(uploadData.message || "O api.video recusou o arquivo.");
-        toast("Vídeo enviado! A preparação pode levar alguns minutos.");
-        await loadApiVideoFeed();
-      } catch (error) {
-        toast(error.message || "Falha no envio do vídeo.");
-      }
-    }, { once: true });
-    picker.click();
+    openPublishChoices();
   });
 
   loadApiVideoFeed();

@@ -1,9 +1,10 @@
-const CACHE_NAME = "oio-shorts-shell-v1";
+const CACHE_NAME = "oio-shorts-shell-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./tiktok-public.js",
   "./manifest.json",
   "./assets/icon.svg"
 ];

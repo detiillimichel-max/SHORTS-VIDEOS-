@@ -117,9 +117,34 @@
     });
     const uploadData = await uploadResponse.json().catch(() => ({}));
     if (!uploadResponse.ok) throw new Error(uploadData.message || "O api.video recusou o arquivo.");
-    toast("Upload recebido pelo api.video. Atualizando o feed…");
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    toast("Upload recebido. Aguardando o processamento do vídeo…");
+
+    // Aguarda o api.video informar que o vídeo já pode ser reproduzido.
+    const uploadedVideoId = uploadData.videoId;
+    if (uploadedVideoId) {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        try {
+          const statusResponse = await fetch(`${API_BASE}/api/apivideo/status?videoId=${encodeURIComponent(uploadedVideoId)}&t=${Date.now()}`, { cache: "no-store" });
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.playable === true) break;
+            if (statusData.playable === false && statusData.encodingFailed === true) {
+              toast("O api.video não conseguiu processar este arquivo. Tente outro vídeo MP4.");
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    } else {
+      await new Promise(resolve => setTimeout(resolve, 8000));
+    }
+
+    // Remove os cards antigos do api.video para recriá-los com o estado mais recente.
+    apiVideoIds.forEach(id => feedEl?.querySelector(`.short-card[data-id="${CSS.escape(id)}"]`)?.remove());
+    apiVideoIds.clear();
     await loadApiVideoFeed();
+    toast("Feed atualizado. Toque no vídeo para testar a reprodução.");
   }
 
   function openPublishChoices() {

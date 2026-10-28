@@ -41,7 +41,7 @@
   function readItems() {
     try {
       const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
-      return Array.isArray(parsed) ? parsed.filter(x => x && /^\d{5,30}$/.test(String(x.id)) && typeof x.url === "string") : [];
+      return Array.isArray(parsed) ? parsed.filter(x => x && typeof x.url === "string" && ( /^\d{5,30}$/.test(String(x.id || "")) || /^https:\/\/(vt\.)?tiktok\.com\//i.test(x.url) )) : [];
     } catch (_) { return []; }
   }
   function saveItems(items) {
@@ -54,8 +54,13 @@
     const host = url.hostname.toLowerCase();
     if (!(host === "tiktok.com" || host.endsWith(".tiktok.com"))) return null;
     const match = url.pathname.match(/\/video\/(\d{5,30})/);
-    if (!match) return null;
-    return { id: match[1], url: "https://www.tiktok.com" + url.pathname };
+    if (match) return { id: match[1], url: "https://www.tiktok.com" + url.pathname };
+    if (host === "vt.tiktok.com" || host === "vm.tiktok.com" || host === "tiktok.com" || host === "www.tiktok.com") {
+      if (/^\/(ZS|[A-Za-z0-9_-]{5,})\/?$/.test(url.pathname) || url.pathname.startsWith("/@")) {
+        return { id: "", url: url.href };
+      }
+    }
+    return null;
   }
   function render() {
     const items = readItems();
@@ -70,13 +75,21 @@
     items.forEach((item, index) => {
       const card = document.createElement("article");
       card.className = "tt-video";
-      const frame = document.createElement("iframe");
-      frame.src = "https://www.tiktok.com/player/v1/" + encodeURIComponent(item.id);
-      frame.title = "Vídeo público do TikTok";
-      frame.loading = "lazy";
-      frame.allow = "fullscreen; autoplay; encrypted-media; picture-in-picture";
-      frame.allowFullscreen = true;
-      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      let frame = null;
+      if (item.id) {
+        frame = document.createElement("iframe");
+        frame.src = "https://www.tiktok.com/player/v1/" + encodeURIComponent(item.id);
+        frame.title = "Vídeo público do TikTok";
+        frame.loading = "lazy";
+        frame.allow = "fullscreen; autoplay; encrypted-media; picture-in-picture";
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = "strict-origin-when-cross-origin";
+      } else {
+        const notice = document.createElement("div");
+        notice.style.cssText = "padding:22px 14px;color:#d5d7e3;font-size:12px;line-height:1.6";
+        notice.textContent = "O TikTok forneceu um link curto. Toque em “Abrir no TikTok” para assistir. Para incorporar o vídeo dentro do app, é necessário resolver o link curto para o ID do vídeo.";
+        card.appendChild(notice);
+      }
       const foot = document.createElement("div");
       foot.className = "tt-video-foot";
       const link = document.createElement("a");
@@ -96,7 +109,8 @@
         render();
       });
       foot.append(link, remove);
-      card.append(frame, foot);
+      if (frame) card.append(frame);
+      card.append(foot);
       list.appendChild(card);
     });
   }
@@ -110,14 +124,14 @@
       return;
     }
     const items = readItems();
-    if (items.some(item => item.id === parsed.id)) {
+    if (items.some(item => item.url === parsed.url || (parsed.id && item.id === parsed.id))) {
       status.textContent = "Esse vídeo já está na lista.";
       return;
     }
     items.unshift(parsed);
     if (!saveItems(items)) return;
     input.value = "";
-    status.textContent = "Vídeo adicionado. Se o criador o tornou privado ou o removeu, o player pode não funcionar.";
+    status.textContent = parsed.id ? "Vídeo adicionado ao player. Se o criador o tornou privado ou o removeu, o player pode não funcionar." : "Link curto aceito. O vídeo abre no TikTok; a reprodução incorporada precisa do ID completo.";
     render();
   });
 

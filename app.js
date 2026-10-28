@@ -73,13 +73,33 @@
         const card = document.createElement("article");
         card.className = "short-card";
         card.dataset.id = video.videoId;
-        const frame = document.createElement("iframe");
-        frame.className = "video-poster api-video-player";
-        frame.src = video.playerUrl || `https://embed.api.video/vod/${encodeURIComponent(video.videoId)}`;
-        frame.title = video.title || "Vídeo publicado";
-        frame.allow = "autoplay; fullscreen; picture-in-picture";
-        frame.allowFullscreen = true;
-        frame.loading = "lazy";
+        const player = document.createElement("video");
+        player.className = "video-poster api-video-player";
+        player.controls = true;
+        player.playsInline = true;
+        player.preload = "metadata";
+        player.poster = video.thumbnailUrl || "";
+        player.setAttribute("aria-label", video.title || "Vídeo publicado");
+        player.src = video.mp4Url || "";
+        if (!player.src && video.hlsUrl) player.src = video.hlsUrl;
+        player.addEventListener("error", () => {
+          if (video.hlsUrl && player.src !== video.hlsUrl) {
+            player.src = video.hlsUrl;
+            player.load();
+          }
+        });
+        const seekBack = document.createElement("button");
+        seekBack.type = "button";
+        seekBack.className = "video-seek-button seek-back";
+        seekBack.textContent = "↶ 10 s";
+        seekBack.setAttribute("aria-label", "Voltar 10 segundos");
+        seekBack.onclick = () => { player.currentTime = Math.max(0, player.currentTime - 10); };
+        const seekForward = document.createElement("button");
+        seekForward.type = "button";
+        seekForward.className = "video-seek-button seek-forward";
+        seekForward.textContent = "10 s ↷";
+        seekForward.setAttribute("aria-label", "Avançar 10 segundos");
+        seekForward.onclick = () => { player.currentTime = Math.min(player.duration || Infinity, player.currentTime + 10); };
         const shade = document.createElement("div");
         shade.className = "video-shade";
         const top = document.createElement("div");
@@ -92,7 +112,7 @@
         const description = document.createElement("p");
         description.textContent = video.description || "Vídeo publicado no OIO Shorts.";
         info.append(title, description);
-        card.append(frame, shade, top, info);
+        card.append(player, seekBack, seekForward, shade, top, info);
         feedEl.appendChild(card);
       });
     } catch (_) {

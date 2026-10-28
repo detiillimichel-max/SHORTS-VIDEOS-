@@ -1,0 +1,40 @@
+name: Diagnóstico seguro do TikTok
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Verificar configuração sem expor credenciais
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verificar presença dos Secrets do TikTok
+        env:
+          TIKTOK_CLIENT_ID: ${{ secrets.TIKTOK_CLIENT_ID }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+        run: |
+          set +x
+          python - <<'PY'
+          import os
+          names = [
+              "TIKTOK_CLIENT_ID",
+              "TIKTOK_CLIENT_KEY",
+              "TIKTOK_CLIENT_SECRET",
+          ]
+          missing = [name for name in names if not os.environ.get(name, "").strip()]
+          if missing:
+              print("Pré-verificação: FALHOU")
+              print("Secrets ausentes ou vazios: " + ", ".join(missing))
+              raise SystemExit(1)
+
+          print("Pré-verificação: OK")
+          print("Os três Secrets esperados estão presentes.")
+          print("Nenhum valor de credencial foi exibido ou enviado à API.")
+          print("Próxima etapa: configurar OAuth com redirect URI e escopos aprovados.")
+          print("Este workflow ainda não consulta perfil nem vídeos: as chaves não substituem um token OAuth autorizado.")
+          PY

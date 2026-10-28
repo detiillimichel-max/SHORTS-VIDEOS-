@@ -34,92 +34,56 @@ jobs:
         run: |
           set +x
           python - <<'PY'
-          import os, sys, json, base64, urllib.request, urllib.error
+          import os, sys, json, base64, urllib.request, urllib.error, urllib.parse
 
           app_id = os.environ.get("PINTEREST_APP_ID", "")
           app_secret = os.environ.get("PINTEREST_APP_SECRET", "")
           refresh_token = os.environ.get("PINTEREST_REFRESH_TOKEN", "")
           pin_id = os.environ["PIN_ID"]
-
-          missing = [name for name, value in [
-              ("PINTEREST_APP_ID", app_id),
-              ("PINTEREST_APP_SECRET", app_secret),
-              ("PINTEREST_REFRESH_TOKEN", refresh_token),
-          ] if not value]
+          missing = [name for name, value in [("PINTEREST_APP_ID", app_id), ("PINTEREST_APP_SECRET", app_secret), ("PINTEREST_REFRESH_TOKEN", refresh_token)] if not value]
           if missing:
               print("Diagnóstico não executado. Secrets ausentes: " + ", ".join(missing))
-              print("Adicione o token OAuth de atualização em Settings → Secrets and variables → Actions.")
+              print("Adicione um refresh token OAuth válido em Settings → Secrets and variables → Actions.")
               sys.exit(1)
 
           def request(url, data=None, headers=None):
               req = urllib.request.Request(url, data=data, headers=headers or {})
               try:
                   with urllib.request.urlopen(req, timeout=25) as response:
-                      body = response.read().decode("utf-8", "replace")
-                      return response.status, body
+                      return response.status, response.read().decode("utf-8", "replace")
               except urllib.error.HTTPError as e:
-                  body = e.read().decode("utf-8", "replace")
-                  return e.code, body
+                  return e.code, e.read().decode("utf-8", "replace")
 
           basic = base64.b64encode((app_id + ":" + app_secret).encode()).decode()
-          token_data = urllib.parse.urlencode({
-              "grant_type": "refresh_token",
-              "refresh_token": refresh_token,
-          }).encode()
-          token_status, token_body = request(
-              "https://api.pinterest.com/v5/oauth/token",
-              data=token_data,
-              headers={
-                  "Authorization": "Basic " + basic,
-                  "Content-Type": "application/x-www-form-urlencoded",
-                  "Accept": "application/json",
-              },
-          )
+          token_data = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
+          token_status, token_body = request("https://api.pinterest.com/v5/oauth/token", data=token_data, headers={"Authorization": "Basic " + basic, "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
           try:
               token_json = json.loads(token_body)
           except Exception:
               token_json = {}
-
           if token_status != 200 or not token_json.get("access_token"):
-              print(json.dumps({
-                  "stage": "oauth_refresh",
-                  "http_status": token_status,
-                  "success": False,
-                  "message": "Não foi possível obter um token de acesso. Verifique o refresh token, as credenciais e os escopos. O corpo da resposta foi omitido para proteger dados."
-              }, ensure_ascii=False))
+              print(json.dumps({"stage":"oauth_refresh","http_status":token_status,"success":False,"message":"Não foi possível obter um token de acesso. Verifique o refresh token, as credenciais e os escopos. A resposta completa foi omitida para proteger dados."}, ensure_ascii=False))
               sys.exit(1)
 
           access_token = token_json["access_token"]
-          pin_status, pin_body = request(
-              "https://api.pinterest.com/v5/pins/" + pin_id,
-              headers={
-                  "Authorization": "Bearer " + access_token,
-                  "Accept": "application/json",
-              },
-          )
+          pin_status, pin_body = request("https://api.pinterest.com/v5/pins/" + pin_id, headers={"Authorization":"Bearer " + access_token,"Accept":"application/json"})
           try:
               pin = json.loads(pin_body)
           except Exception:
               pin = {}
-
-          video_url = pin.get("videos", {}).get("video_url") if isinstance(pin.get("videos"), dict) else None
-          # Never print access/refresh tokens or the complete API response.
+          media = pin.get("media") if isinstance(pin.get("media"), dict) else {}
+          video_url = media.get("video_url")
           result = {
-              "stage": "get_pin",
-              "http_status": pin_status,
-              "pin_id": pin_id,
-              "success": pin_status == 200,
-              "pin_type": "video" if pin.get("videos") else ("image_or_other" if pin_status == 200 else None),
-              "video_url_field_present": isinstance(pin.get("videos"), dict) and "video_url" in pin.get("videos", {}),
-              "video_url_available": bool(video_url),
-              "message": (
-                  "A API retornou uma URL de vídeo."
-                  if video_url else
-                  "O Pin foi consultado, mas não foi encontrada uma URL direta de vídeo nesta resposta."
-                  if pin_status == 200 else
-                  "A consulta falhou. O corpo da resposta foi omitido; verifique status e permissões."
-              )
+              "stage":"get_pin",
+              "http_status":pin_status,
+              "pin_id":pin_id,
+              "success":pin_status == 200,
+              "media_type":media.get("media_type"),
+              "video_url_field_present":"video_url" in media,
+              "video_url_available":bool(video_url),
+              "message":"A API retornou uma URL direta de vídeo." if video_url else ("A consulta funcionou, mas esta resposta não contém uma URL direta de vídeo." if pin_status == 200 else "A consulta falhou. A resposta completa foi omitida; verifique status, permissões e escopos.")
           }
+          # Nunca imprimir tokens, segredos, URLs de vídeo ou a resposta completa da API.
           print(json.dumps(result, ensure_ascii=False))
           if pin_status != 200:
               sys.exit(1)

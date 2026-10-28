@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "OIO Shorts Lab",
+  "short_name": "OIO Shorts",
+  "description": "Feed vertical e laboratório de diagnóstico da API do Pinterest.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

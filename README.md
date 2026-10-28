@@ -38,3 +38,19 @@ O diagnóstico deverá consultar um Pin específico via API v5 e registrar apena
 - Curtidas, salvar, seguir e comentários ainda não persistem em banco de dados.
 - O GitHub Pages serve arquivos estáticos; chamadas protegidas ao Pinterest deverão ocorrer no GitHub Actions e produzir um resultado JSON sanitizado, não no navegador.
 - O GitHub Actions não é um servidor contínuo para responder a cada clique. O diagnóstico será executado manualmente ou em agenda, conforme a próxima etapa.
+
+## Integração api.video (Vercel)
+
+Foram adicionadas funções de servidor:
+- `/api/apivideo/feed`: lista os vídeos do workspace sem expor a chave.
+- `/api/apivideo/upload-token`: emite um token delegado temporário para upload, protegido por PIN.
+
+### Configuração obrigatória na Vercel
+1. Em **Project → Settings → Environment Variables**, confirme `APIVIDEO_API_KEY` em **Production**.
+2. Crie `OIO_UPLOAD_PIN` com um PIN/senha forte, exclusivo para autorizar publicações.
+3. Faça um novo deployment depois de salvar a variável.
+4. Abra o aplicativo pelo domínio da Vercel, não pelo GitHub Pages, para que as rotas `/api/*` estejam disponíveis.
+
+O botão **+** solicita o PIN e permite escolher um vídeo no celular. O navegador recebe apenas um token delegado de upload, não a chave principal. Os vídeos podem levar alguns minutos para serem processados antes de aparecerem no feed.
+
+Nota: o PIN compartilhado é uma proteção inicial, não substitui autenticação individual e limitação de requisições para um serviço público.

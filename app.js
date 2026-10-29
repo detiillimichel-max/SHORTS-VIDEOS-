@@ -313,7 +313,8 @@
         const title = document.createElement("h2");
         title.textContent = video.title || "Vídeo do Vimeo";
         const description = document.createElement("p");
-        description.textContent = video.description || "Vídeo encontrado no Vimeo.";
+        const rawDescription = String(video.description || "Vídeo encontrado no Vimeo.").replace(/\\n/g, " ").replace(/\s+/g, " ").trim();
+        description.textContent = rawDescription.length > 180 ? rawDescription.slice(0, 177) + "…" : rawDescription;
         info.append(title, description);
         card.append(player, shade, top, info);
         fragment.appendChild(card);

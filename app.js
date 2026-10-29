@@ -262,6 +262,67 @@
 
   loadApiVideoFeed();
 
+  async function searchVimeoVideos(query) {
+    const term = String(query || "").trim();
+    if (!term) {
+      toast("Digite um termo para buscar no Vimeo.");
+      return;
+    }
+    toast("Buscando vídeos no Vimeo…");
+    try {
+      const response = await fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Não foi possível consultar o Vimeo.");
+      const videos = payload.videos || [];
+      if (!videos.length) {
+        toast("O Vimeo não retornou vídeos incorporáveis para esta busca.");
+        return;
+      }
+
+      const feed = $("#video-feed");
+      showScreen("feed-screen");
+      const existing = new Set($(".short-card[data-vimeo-id]").map(card => card.dataset.vimeoId));
+      let added = 0;
+      videos.forEach(video => {
+        if (!video.id || existing.has(String(video.id))) return;
+        const card = document.createElement("article");
+        card.className = "short-card";
+        card.dataset.vimeoId = String(video.id);
+
+        const player = document.createElement("iframe");
+        player.title = video.title || "Vídeo do Vimeo";
+        player.src = video.embedUrl;
+        player.allow = "autoplay; fullscreen; picture-in-picture";
+        player.setAttribute("allowfullscreen", "");
+        player.loading = "lazy";
+        player.referrerPolicy = "strict-origin-when-cross-origin";
+        player.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:1;";
+
+        const shade = document.createElement("div");
+        shade.className = "video-shade";
+        const top = document.createElement("div");
+        top.className = "video-topline";
+        top.innerHTML = '<span class="live-pill"><span></span> OIO SHORTS</span><span class="demo-label">VIMEO</span>';
+        const info = document.createElement("div");
+        info.className = "video-info";
+        const title = document.createElement("h2");
+        title.textContent = video.title || "Vídeo do Vimeo";
+        const description = document.createElement("p");
+        description.textContent = video.description || "Vídeo encontrado no Vimeo.";
+        info.append(title, description);
+        card.append(player, shade, top, info);
+        feed.appendChild(card);
+        added++;
+      });
+      toast(added ? `${added} vídeo(s) do Vimeo adicionados ao feed.` : "Esses vídeos do Vimeo já estão no feed.");
+    } catch (error) {
+      toast(error.message || "Falha ao buscar no Vimeo.");
+    }
+  }
+
   const searchPanel = $("#search-form");
   $("#search-toggle").addEventListener("click", () => {
     searchPanel.classList.toggle("hidden");
@@ -273,9 +334,8 @@
     const query = $("#search-input").value.trim();
     if (!query) return;
     $("#discover-query").value = query;
-    showScreen("discover-screen");
     searchPanel.classList.add("hidden");
-    toast("Busca preparada. A pesquisa na API será conectada depois.");
+    searchVimeoVideos(query);
   });
   $$(".category-tile").forEach(tile => tile.addEventListener("click", () => {
     $("#discover-query").value = tile.dataset.query;
@@ -283,7 +343,7 @@
   }));
   $("#discover-search-button").addEventListener("click", () => {
     const query = $("#discover-query").value.trim();
-    toast(query ? "Pesquisa preparada: " + query : "Digite um termo ou ID de Pin.");
+    searchVimeoVideos(query);
   });
 
   $("#diagnose-button").addEventListener("click", () => {

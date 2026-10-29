@@ -283,8 +283,10 @@
       }
 
       const feed = $("#video-feed");
+      if (!feed) throw new Error("O contêiner do feed não foi encontrado.");
       showScreen("feed-screen");
-      const existing = new Set($(".short-card[data-vimeo-id]").map(card => card.dataset.vimeoId));
+      const existing = new Set($$(".short-card[data-vimeo-id]").map(card => card.dataset.vimeoId));
+      const fragment = document.createDocumentFragment();
       let added = 0;
       videos.forEach(video => {
         if (!video.id || existing.has(String(video.id))) return;
@@ -297,7 +299,7 @@
         player.src = video.embedUrl;
         player.allow = "autoplay; fullscreen; picture-in-picture";
         player.setAttribute("allowfullscreen", "");
-        player.loading = "lazy";
+        player.loading = "eager";
         player.referrerPolicy = "strict-origin-when-cross-origin";
         player.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:1;";
 
@@ -314,9 +316,14 @@
         description.textContent = video.description || "Vídeo encontrado no Vimeo.";
         info.append(title, description);
         card.append(player, shade, top, info);
-        feed.appendChild(card);
+        fragment.appendChild(card);
+        existing.add(String(video.id));
         added++;
       });
+      if (added) {
+        feed.prepend(fragment);
+        feed.scrollTo({ top: 0, behavior: "auto" });
+      }
       toast(added ? `${added} vídeo(s) do Vimeo adicionados ao feed.` : "Esses vídeos do Vimeo já estão no feed.");
     } catch (error) {
       toast(error.message || "Falha ao buscar no Vimeo.");

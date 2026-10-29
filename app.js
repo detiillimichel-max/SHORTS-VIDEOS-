@@ -353,6 +353,9 @@
     searchVimeoVideos(query);
   });
 
+  // Carrega vídeos do Vimeo automaticamente no feed inicial.
+  searchVimeoVideos("nature");
+
   $("#diagnose-button").addEventListener("click", () => {
     const pinId = $("#pin-id").value.trim();
     const result = $("#diagnostic-result");

@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     const limit = Math.min(40, Math.max(1, Number.parseInt(req.query?.limit || "20", 10) || 20));
     const start = (requestedPage - 1) * limit;
     const videos = (catalog.videos || []).slice(start, start + limit);
-    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=60");
+    res.setHeader("Cache-Control", "public, s-maxage=432000, stale-while-revalidate=86400");
     return res.status(200).json({
       source: "Pexels",
       count: videos.length,

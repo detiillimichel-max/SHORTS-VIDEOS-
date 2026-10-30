@@ -268,26 +268,33 @@
       toast("Digite um termo para buscar vídeos.");
       return;
     }
-    toast("Montando feed misto Vimeo + Pexels…");
+    toast("Montando feed misto Vimeo + Pexels + Pixabay…");
     try {
-      const [vimeoResponse, pexelsResponse] = await Promise.all([
+      const [vimeoResponse, pexelsResponse, pixabayResponse] = await Promise.all([
         fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
           cache: "no-store", headers: { Accept: "application/json" }
         }),
         fetch(`${API_BASE}/api/videos/pexels?q=${encodeURIComponent(term)}&page=1&limit=20`, {
           headers: { Accept: "application/json" }
+        }),
+        fetch(`${API_BASE}/api/videos/pixabay?q=${encodeURIComponent(term)}&page=1&limit=20`, {
+          headers: { Accept: "application/json" }
         })
       ]);
-      const [vimeoPayload, pexelsPayload] = await Promise.all([
+      const [vimeoPayload, pexelsPayload, pixabayPayload] = await Promise.all([
         vimeoResponse.json().catch(() => ({})),
-        pexelsResponse.json().catch(() => ({}))
+        pexelsResponse.json().catch(() => ({})),
+        pixabayResponse.json().catch(() => ({}))
       ]);
-      if (!vimeoResponse.ok && !pexelsResponse.ok) {
-        throw new Error(vimeoPayload.error || pexelsPayload.error || "Nenhuma fonte de vídeo respondeu.");
+      if (!vimeoResponse.ok && !pexelsResponse.ok && !pixabayResponse.ok) {
+        throw new Error(vimeoPayload.error || pexelsPayload.error || pixabayPayload.error || "Nenhuma fonte de vídeo respondeu.");
       }
-      const vimeoVideos = vimeoResponse.ok ? (vimeoPayload.videos || []) : [];
-      const pexelsVideos = pexelsResponse.ok ? (pexelsPayload.videos || []) : [];
-      if (!vimeoVideos.length && !pexelsVideos.length) {
+      const sources = [
+        { name: "Vimeo", videos: vimeoResponse.ok ? (vimeoPayload.videos || []) : [] },
+        { name: "Pexels", videos: pexelsResponse.ok ? (pexelsPayload.videos || []) : [] },
+        { name: "Pixabay", videos: pixabayResponse.ok ? (pixabayPayload.videos || []) : [] }
+      ];
+      if (!sources.some(source => source.videos.length)) {
         toast("Nenhum vídeo encontrado nas fontes disponíveis.");
         return;
       }
@@ -297,10 +304,11 @@
       showScreen("feed-screen");
 
       const mixed = [];
-      const max = Math.max(vimeoVideos.length, pexelsVideos.length);
+      const max = Math.max(...sources.map(source => source.videos.length));
       for (let i = 0; i < max; i++) {
-        if (vimeoVideos[i]) mixed.push({ ...vimeoVideos[i], source: "Vimeo" });
-        if (pexelsVideos[i]) mixed.push({ ...pexelsVideos[i], source: "Pexels" });
+        sources.forEach(source => {
+          if (source.videos[i]) mixed.push({ ...source.videos[i], source: source.name });
+        });
       }
 
       const existing = new Set($$(".short-card[data-source-id]").map(card => card.dataset.sourceId));
@@ -334,8 +342,7 @@
           player.controls = true;
           player.playsInline = true;
           player.preload = "metadata";
-          player.crossOrigin = "anonymous";
-          player.setAttribute("aria-label", video.title || "Vídeo do Pexels");
+          player.setAttribute("aria-label", video.title || `Vídeo do ${source}`);
           card.appendChild(player);
         } else {
           return;
@@ -356,16 +363,18 @@
         const title = document.createElement("h2");
         title.textContent = video.title || "Vídeo";
         const description = document.createElement("p");
-        description.textContent = video.description || (source === "Pexels" ? "Vídeo do Pexels · " + (video.creator || "Criador") : "Vídeo encontrado no Vimeo.");
+        description.textContent = video.description || (source === "Vimeo"
+          ? "Vídeo encontrado no Vimeo."
+          : `Vídeo do ${source} · ${video.creator || "Criador"}`);
         info.append(title, description);
         card.append(shade, top, info);
 
-        if (source === "Pexels" && video.pageUrl) {
+        if ((source === "Pexels" || source === "Pixabay") && video.pageUrl) {
           const credit = document.createElement("a");
           credit.href = video.pageUrl;
           credit.target = "_blank";
           credit.rel = "noopener noreferrer";
-          credit.textContent = "Ver no Pexels ↗";
+          credit.textContent = `Ver no ${source} ↗`;
           credit.style.cssText = "position:absolute;z-index:4;right:14px;bottom:14px;color:#fff;font-size:11px;text-decoration:underline;";
           card.appendChild(credit);
         }
@@ -379,8 +388,8 @@
         feed.prepend(fragment);
         feed.scrollTo({ top: 0, behavior: "auto" });
       }
-      const pexelsTotal = pexelsPayload.total || 0;
-      toast(`${added} vídeos adicionados · Vimeo + Pexels · Catálogo Pexels: ${pexelsTotal}`);
+      const totals = sources.map(source => `${source.name}: ${source.videos.length}`).join(" · ");
+      toast(`${added} vídeos adicionados · ${totals}`);
     } catch (error) {
       toast(error.message || "Falha ao montar o feed misto.");
     }

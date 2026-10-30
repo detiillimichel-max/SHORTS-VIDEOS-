@@ -265,69 +265,124 @@
   async function searchVimeoVideos(query) {
     const term = String(query || "").trim();
     if (!term) {
-      toast("Digite um termo para buscar no Vimeo.");
+      toast("Digite um termo para buscar vídeos.");
       return;
     }
-    toast("Buscando vídeos no Vimeo…");
+    toast("Montando feed misto Vimeo + Pexels…");
     try {
-      const response = await fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { Accept: "application/json" }
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Não foi possível consultar o Vimeo.");
-      const videos = payload.videos || [];
-      if (!videos.length) {
-        toast("O Vimeo não retornou vídeos incorporáveis para esta busca.");
+      const [vimeoResponse, pexelsResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
+          cache: "no-store", headers: { Accept: "application/json" }
+        }),
+        fetch(`${API_BASE}/api/videos/pexels?q=${encodeURIComponent(term)}&page=1&limit=20`, {
+          headers: { Accept: "application/json" }
+        })
+      ]);
+      const [vimeoPayload, pexelsPayload] = await Promise.all([
+        vimeoResponse.json().catch(() => ({})),
+        pexelsResponse.json().catch(() => ({}))
+      ]);
+      if (!vimeoResponse.ok && !pexelsResponse.ok) {
+        throw new Error(vimeoPayload.error || pexelsPayload.error || "Nenhuma fonte de vídeo respondeu.");
+      }
+      const vimeoVideos = vimeoResponse.ok ? (vimeoPayload.videos || []) : [];
+      const pexelsVideos = pexelsResponse.ok ? (pexelsPayload.videos || []) : [];
+      if (!vimeoVideos.length && !pexelsVideos.length) {
+        toast("Nenhum vídeo encontrado nas fontes disponíveis.");
         return;
       }
 
       const feed = $("#video-feed");
       if (!feed) throw new Error("O contêiner do feed não foi encontrado.");
       showScreen("feed-screen");
-      const existing = new Set($$(".short-card[data-vimeo-id]").map(card => card.dataset.vimeoId));
+
+      const mixed = [];
+      const max = Math.max(vimeoVideos.length, pexelsVideos.length);
+      for (let i = 0; i < max; i++) {
+        if (vimeoVideos[i]) mixed.push({ ...vimeoVideos[i], source: "Vimeo" });
+        if (pexelsVideos[i]) mixed.push({ ...pexelsVideos[i], source: "Pexels" });
+      }
+
+      const existing = new Set($$(".short-card[data-source-id]").map(card => card.dataset.sourceId));
       const fragment = document.createDocumentFragment();
       let added = 0;
-      videos.forEach(video => {
-        if (!video.id || existing.has(String(video.id))) return;
+      mixed.forEach(video => {
+        const id = String(video.id || "");
+        const source = video.source || "Vimeo";
+        const sourceId = source + ":" + id;
+        if (!id || existing.has(sourceId)) return;
+
         const card = document.createElement("article");
         card.className = "short-card";
-        card.dataset.vimeoId = String(video.id);
+        card.dataset.sourceId = sourceId;
 
-        const player = document.createElement("iframe");
-        player.title = video.title || "Vídeo do Vimeo";
-        player.src = video.embedUrl;
-        player.allow = "autoplay; fullscreen; picture-in-picture";
-        player.setAttribute("allowfullscreen", "");
-        player.loading = "eager";
-        player.referrerPolicy = "strict-origin-when-cross-origin";
-        player.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:1;";
+        if (source === "Vimeo" && video.embedUrl) {
+          const player = document.createElement("iframe");
+          player.title = video.title || "Vídeo do Vimeo";
+          player.src = video.embedUrl;
+          player.allow = "autoplay; fullscreen; picture-in-picture";
+          player.setAttribute("allowfullscreen", "");
+          player.loading = "lazy";
+          player.referrerPolicy = "strict-origin-when-cross-origin";
+          player.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:1;";
+          card.appendChild(player);
+        } else if (video.videoUrl) {
+          const player = document.createElement("video");
+          player.className = "video-poster";
+          player.src = video.videoUrl;
+          player.poster = video.thumbnailUrl || "";
+          player.controls = true;
+          player.playsInline = true;
+          player.preload = "metadata";
+          player.crossOrigin = "anonymous";
+          player.setAttribute("aria-label", video.title || "Vídeo do Pexels");
+          card.appendChild(player);
+        } else {
+          return;
+        }
 
         const shade = document.createElement("div");
         shade.className = "video-shade";
         const top = document.createElement("div");
         top.className = "video-topline";
-        top.innerHTML = '<span class="live-pill"><span></span> OIO SHORTS</span><span class="demo-label">VIMEO</span>';
+        top.innerHTML = '<span class="live-pill"><span></span> OIO SHORTS</span>';
+        const sourceLabel = document.createElement("span");
+        sourceLabel.className = "demo-label";
+        sourceLabel.textContent = source.toUpperCase();
+        top.appendChild(sourceLabel);
+
         const info = document.createElement("div");
         info.className = "video-info";
         const title = document.createElement("h2");
-        title.textContent = video.title || "Vídeo do Vimeo";
+        title.textContent = video.title || "Vídeo";
         const description = document.createElement("p");
-        const rawDescription = String(video.description || "Vídeo encontrado no Vimeo.").replace(/\\n/g, " ").replace(/\s+/g, " ").trim();
-        description.textContent = rawDescription.length > 180 ? rawDescription.slice(0, 177) + "…" : rawDescription;
+        description.textContent = video.description || (source === "Pexels" ? "Vídeo do Pexels · " + (video.creator || "Criador") : "Vídeo encontrado no Vimeo.");
         info.append(title, description);
-        card.append(player, shade, top, info);
+        card.append(shade, top, info);
+
+        if (source === "Pexels" && video.pageUrl) {
+          const credit = document.createElement("a");
+          credit.href = video.pageUrl;
+          credit.target = "_blank";
+          credit.rel = "noopener noreferrer";
+          credit.textContent = "Ver no Pexels ↗";
+          credit.style.cssText = "position:absolute;z-index:4;right:14px;bottom:14px;color:#fff;font-size:11px;text-decoration:underline;";
+          card.appendChild(credit);
+        }
         fragment.appendChild(card);
-        existing.add(String(video.id));
+        existing.add(sourceId);
         added++;
       });
+
       if (added) {
+        feed.querySelectorAll(".short-card[data-id^='demo-']").forEach(card => card.remove());
         feed.prepend(fragment);
         feed.scrollTo({ top: 0, behavior: "auto" });
       }
-      toast(added ? `${added} vídeo(s) do Vimeo adicionados ao feed.` : "Esses vídeos do Vimeo já estão no feed.");
+      const pexelsTotal = pexelsPayload.total || 0;
+      toast(`${added} vídeos adicionados · Vimeo + Pexels · Catálogo Pexels: ${pexelsTotal}`);
     } catch (error) {
-      toast(error.message || "Falha ao buscar no Vimeo.");
+      toast(error.message || "Falha ao montar o feed misto.");
     }
   }
 

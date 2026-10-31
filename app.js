@@ -27,8 +27,8 @@
   navItems.forEach(button => button.addEventListener("click", () => showScreen(button.dataset.screen)));
   const musicEntry = $("#open-music-screen");
   const musicBack = $("#music-back");
-  musicEntry?.addEventListener("click", () => showScreen("music-screen"));
-  musicBack?.addEventListener("click", () => showScreen("discover-screen"));
+  musicEntry?.addEventListener("click", () => { resetMusicHub(); showScreen("music-screen"); });
+  musicBack?.addEventListener("click", () => { resetMusicHub(); showScreen("discover-screen"); });
   const coverrCatalog = $("#coverr-catalog");
   const coverrProviderGrid = $(".music-provider-grid");
   const coverrMusicNote = $(".music-note");
@@ -60,6 +60,15 @@
     coverrPlayButton.innerHTML = yes ? '<i data-lucide="pause"></i>' : '<i data-lucide="play"></i>';
     coverrPlayButton.setAttribute("aria-label", yes ? "Pausar" : "Reproduzir");
     refreshIcons();
+  }
+
+  function resetMusicHub() {
+    coverrAudio.pause();
+    coverrPlaying(false);
+    coverrPlayer.classList.add("hidden");
+    coverrCatalog.classList.add("hidden");
+    coverrProviderGrid.classList.remove("hidden");
+    coverrMusicNote.classList.remove("hidden");
   }
   function coverrDrawWave(track) {
     const values = Array.isArray(track.waveform) ? track.waveform : [];

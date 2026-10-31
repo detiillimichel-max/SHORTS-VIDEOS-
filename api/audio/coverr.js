@@ -1,8 +1,50 @@
+import { get, put } from "@vercel/blob";
+
+const CACHE_PATH = "catalogs/coverr/music-page-0.json";
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CACHE_TTL_SECONDS = 6 * 60 * 60;
+
+async function readBlobCache() {
+  try {
+    const cached = await get(CACHE_PATH, { access: "public" });
+    if (!cached || !cached.stream) return null;
+
+    const uploadedAt = cached.blob?.uploadedAt
+      ? new Date(cached.blob.uploadedAt).getTime()
+      : 0;
+
+    if (!uploadedAt || Date.now() - uploadedAt >= CACHE_TTL_MS) return null;
+
+    const payload = await new Response(cached.stream).json();
+    return payload && Array.isArray(payload.audios) ? payload : null;
+  } catch (_) {
+    // A cache miss or Blob outage must not prevent the live Coverr request.
+    return null;
+  }
+}
+
+async function writeBlobCache(payload) {
+  try {
+    await put(CACHE_PATH, JSON.stringify(payload), {
+      access: "public",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: "application/json; charset=utf-8",
+      cacheControlMaxAge: CACHE_TTL_SECONDS
+    });
+    return true;
+  } catch (_) {
+    // Keep the catalog usable even if Blob writes fail.
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=86400");
+
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") return res.status(405).json({ error: "Método não permitido." });
 
@@ -12,6 +54,15 @@ export default async function handler(req, res) {
   const query = String(req.query?.q || "").trim().slice(0, 100);
   const page = Math.max(0, Number.parseInt(req.query?.page || "0", 10) || 0);
   const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query?.limit || "20", 10) || 20));
+  const useBlobCache = !query && page === 0 && pageSize === 100;
+
+  if (useBlobCache) {
+    const cached = await readBlobCache();
+    if (cached) {
+      res.setHeader("X-OIO-Catalog-Cache", "HIT");
+      return res.status(200).json({ ...cached, cache: "blob", cacheAgeLimitHours: 6 });
+    }
+  }
 
   try {
     const url = new URL("https://api.coverr.co/audios");
@@ -53,7 +104,7 @@ export default async function handler(req, res) {
       pageUrl: item.slug ? `https://coverr.co/music/${encodeURIComponent(item.slug)}` : "https://coverr.co/"
     })).filter(item => item.id);
 
-    return res.status(200).json({
+    const result = {
       source: "Coverr",
       count: audios.length,
       page: payload.page ?? page,
@@ -62,7 +113,16 @@ export default async function handler(req, res) {
       pages: payload.pages ?? null,
       total: payload.total ?? null,
       audios
-    });
+    };
+
+    if (useBlobCache) {
+      const saved = await writeBlobCache(result);
+      res.setHeader("X-OIO-Catalog-Cache", saved ? "REFRESHED" : "BYPASS");
+      return res.status(200).json({ ...result, cache: saved ? "blob-refreshed" : "live", cacheAgeLimitHours: 6 });
+    }
+
+    res.setHeader("X-OIO-Catalog-Cache", "BYPASS");
+    return res.status(200).json(result);
   } catch (error) {
     return res.status(502).json({ error: error.message || "Falha ao consultar a API de músicas Coverr." });
   }

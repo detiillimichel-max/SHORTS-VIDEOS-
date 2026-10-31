@@ -42,19 +42,33 @@ export default async function handler(req, res) {
         .json({ error: message, upstreamStatus: response.status });
     }
 
-    const videos = (payload.resources || [])
-      .filter(item => item?.id && item.content_type === "video" && item.preview_url)
-      .map(item => ({
-        id: String(item.id),
-        title: item.title || "Vídeo do Vecteezy",
-        description: (item.tags || []).slice(0, 8).join(" · "),
-        videoUrl: item.preview_url,
-        thumbnailUrl: item.thumbnail_2x_url || item.thumbnail_url || null,
+    const candidates = (payload.resources || [])
+      .filter(item => item?.id && item.content_type === "video");
+    const videos = (await Promise.all(candidates.map(async item => {
+      let resource = item;
+      try {
+        const detailUrl = `https://api.vecteezy.com/v2/${encodeURIComponent(accountId)}/resources/${encodeURIComponent(item.id)}`;
+        const detailResponse = await fetch(detailUrl, {
+          headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" }
+        });
+        if (detailResponse.ok) {
+          const detail = await detailResponse.json();
+          resource = detail.resource || detail;
+        }
+      } catch (_) {}
+      if (resource.content_type !== "video" || !resource.preview_url) return null;
+      return {
+        id: String(resource.id || item.id),
+        title: resource.title || item.title || "Vídeo do Vecteezy",
+        description: (resource.tags || item.tags || []).slice(0, 8).join(" · "),
+        videoUrl: resource.preview_url,
+        thumbnailUrl: resource.thumbnail_2x_url || resource.thumbnail_url || null,
         source: "Vecteezy",
-        width: Number(item.dimensions?.width) || null,
-        height: Number(item.dimensions?.height) || null,
-        pageUrl: `https://www.vecteezy.com/video/${encodeURIComponent(item.id)}`
-      }));
+        width: Number(resource.dimensions?.width) || null,
+        height: Number(resource.dimensions?.height) || null,
+        pageUrl: `https://www.vecteezy.com/video/${encodeURIComponent(resource.id || item.id)}`
+      };
+    }))).filter(Boolean);
 
     return res.status(200).json({
       source: "Vecteezy",

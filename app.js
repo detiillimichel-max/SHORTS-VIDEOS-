@@ -349,10 +349,11 @@
           player.preload = "metadata";
           player.setAttribute("aria-label", video.title || `Vídeo do ${source}`);
           if (source === "Vecteezy") {
-            const vertical = video.width && video.height && video.height > video.width;
-            player.style.objectFit = vertical ? "cover" : "contain";
+            player.style.objectFit = "contain";
             player.style.background = "#000";
             player.addEventListener("loadedmetadata", () => {
+              const vertical = player.videoHeight > player.videoWidth;
+              player.style.objectFit = vertical ? "cover" : "contain";
               card.dataset.playback = "confirmed";
               player.dataset.playback = "confirmed";
             }, { once: true });

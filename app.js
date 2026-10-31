@@ -283,7 +283,7 @@
         fetch(`${API_BASE}/api/videos/vecteezy?q=${encodeURIComponent(term)}&page=1&limit=12`, {
           cache: "no-store", headers: { Accept: "application/json" }
         }),
-        fetch(`${API_BASE}/api/videos/coverr?q=${encodeURIComponent(term)}&page=0&limit=20`, {
+        fetch(`${API_BASE}/api/videos/coverr?q=${encodeURIComponent(term)}&page=0&limit=100`, {
           cache: "no-store", headers: { Accept: "application/json" }
         })
       ]);

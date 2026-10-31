@@ -270,7 +270,7 @@
     }
     toast("Montando feed misto Vimeo + Pexels + Pixabay + Vecteezy + Coverr…");
     try {
-      const [vimeoResponse, pexelsResponse, pixabayResponse, vecteezyResponse] = await Promise.all([
+      const [vimeoResponse, pexelsResponse, pixabayResponse, vecteezyResponse, coverrResponse] = await Promise.all([
         fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
           cache: "no-store", headers: { Accept: "application/json" }
         }),

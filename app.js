@@ -29,9 +29,203 @@
   const musicBack = $("#music-back");
   musicEntry?.addEventListener("click", () => showScreen("music-screen"));
   musicBack?.addEventListener("click", () => showScreen("discover-screen"));
+  const coverrCatalog = $("#coverr-catalog");
+  const coverrProviderGrid = $(".music-provider-grid");
+  const coverrMusicNote = $(".music-note");
+  const coverrAudio = new Audio();
+  coverrAudio.preload = "none";
+  coverrAudio.volume = 0.8;
+  const coverrState = { page: 0, query: "", pages: null, total: null, tracks: [], currentIndex: -1 };
+  const coverrCacheTtl = 21600000;
+  const coverrStatus = $("#coverr-status");
+  const coverrList = $("#coverr-track-list");
+  const coverrWaveform = $("#coverr-waveform");
+  const coverrPlayer = $("#coverr-player");
+  const coverrPlayButton = $("#coverr-play");
+  const coverrCacheKey = query => "oio_coverr_music_v1:" + (query || "__all__");
+  const coverrTime = seconds => {
+    const n = Math.max(0, Math.floor(Number(seconds) || 0));
+    return Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
+  };
+  function coverrReadCache(query) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(coverrCacheKey(query)) || "null");
+      return saved && Date.now() - saved.time < coverrCacheTtl ? saved.data : null;
+    } catch (_) { return null; }
+  }
+  function coverrWriteCache(query, data) {
+    try { localStorage.setItem(coverrCacheKey(query), JSON.stringify({ time: Date.now(), data })); } catch (_) {}
+  }
+  function coverrPlaying(yes) {
+    coverrPlayButton.innerHTML = yes ? '<i data-lucide="pause"></i>' : '<i data-lucide="play"></i>';
+    coverrPlayButton.setAttribute("aria-label", yes ? "Pausar" : "Reproduzir");
+    refreshIcons();
+  }
+  function coverrDrawWave(track) {
+    const values = Array.isArray(track.waveform) ? track.waveform : [];
+    const count = Math.min(72, Math.max(36, values.length || 48));
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const pos = values.length ? Math.min(values.length - 1, Math.floor(i * values.length / count)) : -1;
+      const v = pos >= 0 ? Number(values[pos]) : 0.3;
+      const bar = document.createElement("span");
+      bar.className = "coverr-wave-bar";
+      bar.style.height = Math.round(9 + Math.max(.08, Math.min(1, Number.isFinite(v) ? v : .3)) * 47) + "px";
+      frag.appendChild(bar);
+    }
+    coverrWaveform.replaceChildren(frag);
+    coverrWaveform.setAttribute("aria-valuenow", "0");
+  }
+  function coverrProgress() {
+    const duration = coverrAudio.duration || coverrState.tracks[coverrState.currentIndex]?.duration || 0;
+    const ratio = duration ? Math.min(1, coverrAudio.currentTime / duration) : 0;
+    const bars = $(".coverr-wave-bar", coverrWaveform);
+    bars.forEach((bar, i) => bar.classList.toggle("played", i < Math.round(ratio * bars.length)));
+    $("#coverr-current-time").textContent = coverrTime(coverrAudio.currentTime);
+    $("#coverr-total-time").textContent = coverrTime(duration);
+    coverrWaveform.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
+  }
+  function coverrPlayTrack(index, autoplay = true) {
+    const track = coverrState.tracks[index];
+    if (!track) return;
+    if (track.isPremium || !track.previewUrl) {
+      toast(track.isPremium ? "Esta faixa é Premium na Coverr." : "Prévia indisponível.");
+      return;
+    }
+    coverrState.currentIndex = index;
+    coverrPlayer.classList.remove("hidden");
+    $("#coverr-player-title").textContent = track.title || "Música Coverr";
+    $("#coverr-player-subtitle").textContent = [...(track.genres || []).slice(0, 2), ...(track.instruments || []).slice(0, 2)].join(" · ") || "Coverr · Stock Music";
+    $("#coverr-track-link").href = track.pageUrl || "https://coverr.co/";
+    coverrDrawWave(track);
+    coverrAudio.src = track.previewUrl;
+    coverrAudio.load();
+    coverrProgress();
+    $(".coverr-track").forEach((el, i) => el.classList.toggle("selected", i === index));
+    if (autoplay) coverrAudio.play().catch(() => toast("Toque em reproduzir para iniciar a prévia."));
+  }
+  function coverrRender() {
+    const frag = document.createDocumentFragment();
+    coverrState.tracks.forEach((track, index) => {
+      const row = document.createElement("article");
+      row.className = "coverr-track" + (track.isPremium ? " premium" : "") + (index === coverrState.currentIndex ? " selected" : "");
+      const art = document.createElement("div");
+      art.className = "coverr-track-art";
+      art.innerHTML = '<i data-lucide="music-2"></i>';
+      const info = document.createElement("div");
+      info.className = "coverr-track-info";
+      const title = document.createElement("b");
+      title.textContent = track.title || "Música Coverr";
+      const detail = document.createElement("small");
+      detail.textContent = [...(track.genres || []).slice(0, 2), ...(track.instruments || []).slice(0, 1)].join(" · ") || "Stock Music";
+      info.append(title, detail);
+      const duration = document.createElement("small");
+      duration.className = "coverr-track-duration";
+      duration.textContent = coverrTime(track.duration);
+      const play = document.createElement("button");
+      play.type = "button";
+      play.className = "coverr-track-play";
+      play.disabled = track.isPremium || !track.previewUrl;
+      play.innerHTML = track.isPremium ? '<i data-lucide="lock"></i>' : '<i data-lucide="play"></i>';
+      play.addEventListener("click", () => coverrPlayTrack(index));
+      row.append(art, info, duration, play);
+      frag.appendChild(row);
+    });
+    coverrList.replaceChildren(frag);
+    refreshIcons();
+  }
+  async function coverrLoad(query = coverrState.query, page = 0, append = false) {
+    coverrStatus.textContent = "Carregando músicas da Coverr...";
+    coverrStatus.classList.remove("error");
+    if (!append) {
+      coverrState.query = query;
+      coverrState.page = 0;
+      coverrState.tracks = [];
+      coverrState.currentIndex = -1;
+      coverrList.replaceChildren();
+      coverrPlayer.classList.add("hidden");
+      coverrAudio.pause();
+      coverrAudio.removeAttribute("src");
+      coverrPlaying(false);
+    }
+    let payload = page === 0 ? coverrReadCache(query) : null;
+    try {
+      if (!payload) {
+        const params = new URLSearchParams({ page: String(page), limit: "100" });
+        if (query) params.set("q", query);
+        const response = await fetch(API_BASE + "/api/audio/coverr?" + params.toString(), { headers: { Accept: "application/json" } });
+        if (!response.ok) {
+          const problem = await response.json().catch(() => ({}));
+          throw new Error(problem.error || "Coverr respondeu HTTP " + response.status + ".");
+        }
+        payload = await response.json();
+        if (page === 0) coverrWriteCache(query, payload);
+      }
+      const incoming = Array.isArray(payload.audios) ? payload.audios : [];
+      const known = new Set(coverrState.tracks.map(track => track.id));
+      incoming.forEach(track => { if (!known.has(track.id)) { coverrState.tracks.push(track); known.add(track.id); } });
+      coverrState.page = page;
+      coverrState.total = payload.total ?? coverrState.total;
+      coverrState.pages = payload.pages ?? coverrState.pages;
+      $("#coverr-catalog-count").textContent = (coverrState.total ?? coverrState.tracks.length) + " faixas · " + coverrState.tracks.length + " carregadas";
+      coverrStatus.textContent = coverrState.tracks.length ? "Escolha uma faixa para ouvir a prévia." : "Nenhuma música encontrada.";
+      coverrRender();
+      $("#coverr-load-more").classList.toggle("hidden", !(coverrState.pages ? page + 1 < coverrState.pages : incoming.length === 100));
+    } catch (error) {
+      coverrStatus.textContent = error.message || "Falha ao carregar Coverr.";
+      coverrStatus.classList.add("error");
+      toast(coverrStatus.textContent);
+    }
+  }
   $("#open-coverr-catalog")?.addEventListener("click", () => {
-    toast("O catálogo Coverr será conectado na próxima etapa.");
+    coverrProviderGrid.classList.add("hidden");
+    coverrMusicNote.classList.add("hidden");
+    coverrCatalog.classList.remove("hidden");
+    coverrLoad("", 0, false);
+    $(".music-screen").scrollTo({ top: 0, behavior: "smooth" });
   });
+  $("#coverr-back")?.addEventListener("click", () => {
+    coverrCatalog.classList.add("hidden");
+    coverrProviderGrid.classList.remove("hidden");
+    coverrMusicNote.classList.remove("hidden");
+    coverrAudio.pause();
+    coverrPlaying(false);
+  });
+  $("#coverr-search-button")?.addEventListener("click", () => coverrLoad($("#coverr-search-input").value.trim(), 0, false));
+  $("#coverr-search-input")?.addEventListener("keydown", e => { if (e.key === "Enter") coverrLoad(e.currentTarget.value.trim(), 0, false); });
+  $("#coverr-load-more")?.addEventListener("click", () => coverrLoad(coverrState.query, coverrState.page + 1, true));
+  coverrPlayButton?.addEventListener("click", () => {
+    if (!coverrAudio.src) return toast("Escolha uma música na lista.");
+    if (coverrAudio.paused) coverrAudio.play().catch(() => toast("Não foi possível reproduzir esta prévia."));
+    else coverrAudio.pause();
+  });
+  $("#coverr-prev")?.addEventListener("click", () => coverrPlayTrack(Math.max(0, coverrState.currentIndex - 1)));
+  $("#coverr-next")?.addEventListener("click", () => coverrPlayTrack(Math.min(coverrState.tracks.length - 1, coverrState.currentIndex + 1)));
+  $("#coverr-volume")?.addEventListener("input", e => {
+    coverrAudio.volume = Number(e.currentTarget.value);
+    $("#coverr-volume-label").textContent = Math.round(coverrAudio.volume * 100) + "%";
+  });
+  coverrWaveform?.addEventListener("click", e => {
+    if (!Number.isFinite(coverrAudio.duration)) return;
+    const rect = coverrWaveform.getBoundingClientRect();
+    coverrAudio.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * coverrAudio.duration;
+    coverrProgress();
+  });
+  coverrWaveform?.addEventListener("keydown", e => {
+    if (!Number.isFinite(coverrAudio.duration) || !["ArrowRight", "ArrowLeft"].includes(e.key)) return;
+    e.preventDefault();
+    coverrAudio.currentTime = Math.max(0, Math.min(coverrAudio.duration, coverrAudio.currentTime + (e.key === "ArrowRight" ? 5 : -5)));
+    coverrProgress();
+  });
+  coverrAudio.addEventListener("timeupdate", coverrProgress);
+  coverrAudio.addEventListener("loadedmetadata", coverrProgress);
+  coverrAudio.addEventListener("play", () => coverrPlaying(true));
+  coverrAudio.addEventListener("pause", () => coverrPlaying(false));
+  coverrAudio.addEventListener("ended", () => {
+    coverrPlaying(false);
+    if (coverrState.currentIndex < coverrState.tracks.length - 1) coverrPlayTrack(coverrState.currentIndex + 1);
+  });
+  coverrAudio.addEventListener("error", () => { if (coverrAudio.src) toast("A prévia desta faixa não pôde ser reproduzida."); });
   $$(".feed-tab").forEach(button => button.addEventListener("click", () => {
     $$(".feed-tab").forEach(tab => tab.classList.toggle("active", tab === button));
     toast(button.dataset.feed === "following" ? "O feed Seguindo será conectado numa próxima etapa." : "Você está vendo a demonstração Para você.");

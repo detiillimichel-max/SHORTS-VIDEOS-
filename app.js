@@ -17,6 +17,7 @@
   const screens = $$(".screen");
   const navItems = $$(".nav-item");
   function showScreen(id) {
+    if (id !== "music-screen") resetMusicHub();
     screens.forEach(screen => screen.classList.toggle("active", screen.id === id));
     navItems.forEach(button => button.classList.toggle("active", button.dataset.screen === id));
     const topbar = $(".topbar");

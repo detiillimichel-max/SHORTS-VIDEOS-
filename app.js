@@ -287,7 +287,7 @@
           cache: "no-store", headers: { Accept: "application/json" }
         })
       ]);
-      const [vimeoPayload, pexelsPayload, pixabayPayload, vecteezyPayload] = await Promise.all([
+      const [vimeoPayload, pexelsPayload, pixabayPayload, vecteezyPayload, coverrPayload] = await Promise.all([
         vimeoResponse.json().catch(() => ({})),
         pexelsResponse.json().catch(() => ({})),
         pixabayResponse.json().catch(() => ({})),
@@ -295,7 +295,7 @@
         coverrResponse.json().catch(() => ({}))
       ]);
       if (!vimeoResponse.ok && !pexelsResponse.ok && !pixabayResponse.ok && !vecteezyResponse.ok && !coverrResponse.ok) {
-        throw new Error(vimeoPayload.error || pexelsPayload.error || pixabayPayload.error || vecteezyPayload.error || "Nenhuma fonte de vídeo respondeu.");
+        throw new Error(vimeoPayload.error || pexelsPayload.error || pixabayPayload.error || vecteezyPayload.error || coverrPayload.error || "Nenhuma fonte de vídeo respondeu.");
       }
       const sources = [
         { name: "Vimeo", videos: vimeoResponse.ok ? (vimeoPayload.videos || []) : [] },

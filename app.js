@@ -268,7 +268,7 @@
       toast("Digite um termo para buscar vídeos.");
       return;
     }
-    toast("Montando feed misto Vimeo + Pexels + Pixabay + Vecteezy…");
+    toast("Montando feed misto Vimeo + Pexels + Pixabay + Vecteezy + Coverr…");
     try {
       const [vimeoResponse, pexelsResponse, pixabayResponse, vecteezyResponse] = await Promise.all([
         fetch(`${API_BASE}/api/videos/vimeo?q=${encodeURIComponent(term)}&t=${Date.now()}`, {
@@ -282,22 +282,27 @@
         }),
         fetch(`${API_BASE}/api/videos/vecteezy?q=${encodeURIComponent(term)}&page=1&limit=12`, {
           cache: "no-store", headers: { Accept: "application/json" }
+        }),
+        fetch(`${API_BASE}/api/videos/coverr?q=${encodeURIComponent(term)}&page=0&limit=20`, {
+          cache: "no-store", headers: { Accept: "application/json" }
         })
       ]);
       const [vimeoPayload, pexelsPayload, pixabayPayload, vecteezyPayload] = await Promise.all([
         vimeoResponse.json().catch(() => ({})),
         pexelsResponse.json().catch(() => ({})),
         pixabayResponse.json().catch(() => ({})),
-        vecteezyResponse.json().catch(() => ({}))
+        vecteezyResponse.json().catch(() => ({})),
+        coverrResponse.json().catch(() => ({}))
       ]);
-      if (!vimeoResponse.ok && !pexelsResponse.ok && !pixabayResponse.ok && !vecteezyResponse.ok) {
+      if (!vimeoResponse.ok && !pexelsResponse.ok && !pixabayResponse.ok && !vecteezyResponse.ok && !coverrResponse.ok) {
         throw new Error(vimeoPayload.error || pexelsPayload.error || pixabayPayload.error || vecteezyPayload.error || "Nenhuma fonte de vídeo respondeu.");
       }
       const sources = [
         { name: "Vimeo", videos: vimeoResponse.ok ? (vimeoPayload.videos || []) : [] },
         { name: "Pexels", videos: pexelsResponse.ok ? (pexelsPayload.videos || []) : [] },
         { name: "Pixabay", videos: pixabayResponse.ok ? (pixabayPayload.videos || []) : [] },
-        { name: "Vecteezy", videos: vecteezyResponse.ok ? (vecteezyPayload.videos || []) : [] }
+        { name: "Vecteezy", videos: vecteezyResponse.ok ? (vecteezyPayload.videos || []) : [] },
+        { name: "Coverr", videos: coverrResponse.ok ? (coverrPayload.videos || []) : [] }
       ];
       if (!sources.some(source => source.videos.length)) {
         toast("Nenhum vídeo encontrado nas fontes disponíveis.");
@@ -389,7 +394,7 @@
         info.append(title, description);
         card.append(shade, top, info);
 
-        if ((source === "Pexels" || source === "Pixabay" || source === "Vecteezy") && video.pageUrl) {
+        if ((source === "Pexels" || source === "Pixabay" || source === "Vecteezy" || source === "Coverr") && video.pageUrl) {
           const credit = document.createElement("a");
           credit.href = video.pageUrl;
           credit.target = "_blank";

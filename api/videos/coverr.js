@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   const query = String(req.query?.q || "nature").trim().slice(0, 100);
   const page = Math.max(0, Number.parseInt(req.query?.page || "0", 10) || 0);
-  const pageSize = Math.min(40, Math.max(1, Number.parseInt(req.query?.limit || "20", 10) || 20));
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query?.limit || "20", 10) || 20));
 
   try {
     const url = new URL("https://api.coverr.co/videos");
@@ -60,6 +60,8 @@ export default async function handler(req, res) {
       source: "Coverr",
       count: videos.length,
       page: payload.page ?? page,
+      requestedPageSize: pageSize,
+      actualPageSize: payload.page_size ?? null,
       pages: payload.pages ?? null,
       total: payload.total ?? null,
       videos

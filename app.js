@@ -195,7 +195,8 @@
     coverrAudio.pause();
     coverrPlaying(false);
     coverrPlayer.classList.add("hidden");
-  });\n  $("#coverr-search-button")?.addEventListener("click", () => coverrLoad($("#coverr-search-input").value.trim(), 0, false));
+  });
+  $("#coverr-search-button")?.addEventListener("click", () => coverrLoad($("#coverr-search-input").value.trim(), 0, false));
   $("#coverr-search-input")?.addEventListener("keydown", e => { if (e.key === "Enter") coverrLoad(e.currentTarget.value.trim(), 0, false); });
   $("#coverr-load-more")?.addEventListener("click", () => coverrLoad(coverrState.query, coverrState.page + 1, true));
   coverrPlayButton?.addEventListener("click", () => {

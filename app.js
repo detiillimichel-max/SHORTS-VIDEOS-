@@ -25,6 +25,13 @@
     refreshIcons();
   }
   navItems.forEach(button => button.addEventListener("click", () => showScreen(button.dataset.screen)));
+  const musicEntry = $("#open-music-screen");
+  const musicBack = $("#music-back");
+  musicEntry?.addEventListener("click", () => showScreen("music-screen"));
+  musicBack?.addEventListener("click", () => showScreen("discover-screen"));
+  $("#open-coverr-catalog")?.addEventListener("click", () => {
+    toast("O catálogo Coverr será conectado na próxima etapa.");
+  });
   $$(".feed-tab").forEach(button => button.addEventListener("click", () => {
     $$(".feed-tab").forEach(tab => tab.classList.toggle("active", tab === button));
     toast(button.dataset.feed === "following" ? "O feed Seguindo será conectado numa próxima etapa." : "Você está vendo a demonstração Para você.");

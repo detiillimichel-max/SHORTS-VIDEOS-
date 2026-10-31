@@ -441,7 +441,7 @@
     searchPanel.classList.add("hidden");
     searchVimeoVideos(query);
   });
-  $$(".category-tile").forEach(tile => tile.addEventListener("click", () => {
+  $(".category-tile[data-query]").forEach(tile => tile.addEventListener("click", () => {
     $("#discover-query").value = tile.dataset.query;
     toast("Categoria selecionada: " + tile.dataset.query);
   }));

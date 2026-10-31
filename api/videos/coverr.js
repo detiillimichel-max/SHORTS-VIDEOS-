@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     url.searchParams.set("urls", "true");
 
     const response = await fetch(url, {
-      headers: { "x-api-key": apiKey, Accept: "application/json" }
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" }
     });
     const payload = await response.json().catch(() => ({}));
 

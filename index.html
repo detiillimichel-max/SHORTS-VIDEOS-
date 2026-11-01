@@ -145,9 +145,21 @@
         </section>
       </section>
 
-      <section id="activity-screen" class="screen simple-screen">
-        <div class="section-heading"><div><p class="eyebrow">SUA COMUNIDADE</p><h1>Atividade</h1></div><span class="heading-icon"><i data-lucide="bell"></i></span></div>
-        <div class="empty-state"><span><i data-lucide="messages-square"></i></span><h2>Suas conversas começam aqui</h2><p>Notificações, comentários e interações poderão aparecer nesta área nas próximas etapas.</p></div>
+      <section id="activity-screen" class="screen simple-screen telegraph-screen">
+        <div class="section-heading"><div><p class="eyebrow">SUA COMUNIDADE</p><h1>Telégrafo</h1></div><span class="heading-icon"><i data-lucide="messages-square"></i></span></div>
+        <p class="telegraph-intro">Sua central de comunicação no OIO SHORTS.</p>
+        <a class="telegraph-chat-card" href="https://telegrafo-chat.vercel.app/chat" aria-label="Abrir Telégrafo Chat">
+          <span class="telegraph-card-icon"><i data-lucide="message-circle"></i></span>
+          <span class="telegraph-card-copy"><b>Conversas</b><small>Mensagens privadas e contatos</small></span>
+          <span class="telegraph-card-action">Abrir chat <i data-lucide="arrow-up-right"></i></span>
+        </a>
+        <div class="telegraph-grid">
+          <div class="telegraph-feature"><i data-lucide="users"></i><b>Contatos</b><small>Pessoas e criadores</small><span>Em breve</span></div>
+          <div class="telegraph-feature"><i data-lucide="bell"></i><b>Notificações</b><small>Interações e novidades</small><span>Em breve</span></div>
+          <div class="telegraph-feature"><i data-lucide="send"></i><b>Compartilhados</b><small>Conteúdos recebidos</small><span>Em breve</span></div>
+          <div class="telegraph-feature"><i data-lucide="heart"></i><b>Interações</b><small>Curtidas e comentários</small><span>Em breve</span></div>
+        </div>
+        <div class="telegraph-note"><i data-lucide="shield-check"></i><span>O Telégrafo Chat continua independente. O OIO SHORTS apenas oferece o acesso, sem alterar o funcionamento ou os dados do chat.</span></div>
       </section>
 
       <section id="profile-screen" class="screen simple-screen">
@@ -161,7 +173,7 @@
       <button class="nav-item active" data-screen="feed-screen"><i data-lucide="house"></i><span>Início</span></button>
       <button class="nav-item" data-screen="discover-screen"><i data-lucide="compass"></i><span>Descobrir</span></button>
       <button class="create-button" id="create-button" aria-label="Criar"><i data-lucide="plus"></i></button>
-      <button class="nav-item" data-screen="activity-screen"><i data-lucide="inbox"></i><span>Atividade</span></button>
+      <button class="nav-item" data-screen="activity-screen"><i data-lucide="messages-square"></i><span>Telégrafo</span></button>
       <button class="nav-item" data-screen="profile-screen"><i data-lucide="user-round"></i><span>Perfil</span></button>
     </nav>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>

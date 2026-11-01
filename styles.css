@@ -90,3 +90,25 @@
 .coverr-attribution{margin:12px 0 0;color:#969bac;font-size:9px;line-height:1.5;}
 .coverr-attribution a{color:#d6e6e6;}
 @media(min-width:600px){.coverr-track-list{grid-template-columns:1fr 1fr;}}
+
+
+/* Central Telégrafo no OIO SHORTS */
+.telegraph-screen{padding-bottom:28px;}
+.telegraph-intro{margin:-8px 0 20px;color:var(--muted);font-size:13px;line-height:1.55;}
+.telegraph-chat-card{display:grid;grid-template-columns:54px minmax(0,1fr) auto;align-items:center;gap:12px;padding:16px;border:1px solid #25e6df66;border-radius:18px;background:linear-gradient(120deg,#123c40,#171923 78%);color:#fff;text-decoration:none;box-shadow:0 12px 28px #0002;}
+.telegraph-card-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:16px;background:#25e6df20;color:var(--cyan);}
+.telegraph-card-icon svg{width:27px;height:27px;}
+.telegraph-card-copy{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.telegraph-card-copy b{font-size:15px;}
+.telegraph-card-copy small{font-size:11px;color:#c4c6d2;line-height:1.4;}
+.telegraph-card-action{display:flex;align-items:center;gap:5px;color:var(--cyan);font-size:10px;font-weight:850;white-space:nowrap;}
+.telegraph-card-action svg{width:15px;height:15px;}
+.telegraph-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px;}
+.telegraph-feature{position:relative;min-height:116px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border:1px solid #ffffff17;border-radius:16px;background:linear-gradient(145deg,#171923,#101117);}
+.telegraph-feature>svg{width:21px;height:21px;color:var(--cyan);margin-bottom:3px;}
+.telegraph-feature b{font-size:12px;}
+.telegraph-feature small{font-size:10px;color:var(--muted);line-height:1.4;}
+.telegraph-feature span{margin-top:auto;font-size:9px;font-weight:800;color:#a99be9;}
+.telegraph-note{display:flex;align-items:flex-start;gap:9px;margin-top:16px;padding:13px;border:1px solid #ffffff16;border-radius:13px;background:#ffffff08;color:#b8bac8;font-size:10px;line-height:1.55;}
+.telegraph-note svg{width:17px;height:17px;flex:0 0 17px;color:var(--cyan);}
+@media(max-width:360px){.telegraph-chat-card{grid-template-columns:44px minmax(0,1fr);}.telegraph-card-icon{width:44px;height:44px;}.telegraph-card-action{grid-column:2;}}
